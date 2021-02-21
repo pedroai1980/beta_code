@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-area">
+  <div id="form-user">
+    <p class="h2">Route Summary</p>
+    <ul id="summary-list">
+      <li>
+        <b>Start:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["start"][0]}}, {{info["info"]["start"][1]}}
+      </li>
+      <li>
+        <b>Destin:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["destin"][0]}}, {{info["info"]["destin"][1]}}
+      </li>
+      <li>
+        <b>Distance:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["distance"]}}
+      </li>
+      <li>
+          <b>Time w/&nbsp;&nbsp;&nbsp;Traffic: </b> 
+          {{info["info"]["time_w_traffic"]}}
+      </li>
+      <li>
+          <b>Time w/o Traffic: </b>
+          {{info["info"]["time_wo_traffic"]}}
+      </li>
+    </ul>
+
+    <p class="h2">Route Instructions</p>
+    <ul id="instruction-list">
+      {% for instruct in info["info"]["instructions"] %}
+        <li>{{instruct}}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div id="main-map">
+             
+  </div>
+
+
+  <div class="separator"></div>
+
+
+  <div id="chargers-box">
+    <p class="h3 center">First Chargers</p>
+    <ul id="instruction-list">
+      {% for first in info["first_chargers"] %}
+        <li>{{first}}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div id="chargers-box">
+    <p class="h3 center">Chargers</p>
+    <ul id="instruction-list">
+      {% for charger_set in info["chargers"] %}
+        {% for charger in charger_set %}
+          <li>{{charger}}</li>
+        {% endfor %}
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+
+<!-- Jquery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+type="text/javascript" charset="utf-8"></script>
+
+
+<script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"
+type="text/javascript" charset="utf-8"></script>
+<script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"
+type="text/javascript" charset="utf-8"></script>
+<script src="http://js.api.here.com/v3/3.0/mapsjs-ui.js" 
+type="text/javascript" charset="utf-8"></script>
+<link rel="stylesheet" type="text/css" 
+href="http://js.api.here.com/v3/3.0/mapsjs-ui.css" />
+
+<script>
+// Create the initial map of Europe centered in Berlin
+$('#api_response').hide()
+var platform = new H.service.Platform({
+    'app_id': 'Rs0YrqHE32DMv8eA2jlM',
+    'app_code': 'SU3UexcrQYbIsmlHwkIXKA'
+});
+var targetElement = document.getElementById('main-map');
+var defaultLayers = platform.createDefaultLayers();
+var map = new H.Map(
+    document.getElementById('main-map'),
+    defaultLayers.normal.map, {
+        zoom: 6,
+        center: { lat: 39.9422, lng: -3.236474 }
+    }
+);
+
+// Update the map. Puts charger icons in the map
+function updateMap(platform, map, response, coords){
+    // First delete the previous map
+    // document.getElementById("main-map").innerHTML = "";
+
+    var targetElement = document.getElementById('main-map');
+    var defaultLayers = platform.createDefaultLayers();
+
+    var routingParameters = {
+      'mode': 'fastest;car;traffic:enabled',
+      'waypoint0': 'geo!'+coords[0],
+      'waypoint1': 'geo!'+coords[1],
+      //'mode'     : 'traffic',
+      'representation': 'display'
+    };
+
+    var onResult = function(result) {
+        var route,routeShape,startPoint,endPoint,strip;
+        if(result.response.route) {
+            route = result.response.route[0];
+            routeShape = route.shape;
+            strip = new H.geo.Strip();
+            routeShape.forEach(function(point) {
+                var parts = point.split(',');
+                strip.pushLatLngAlt(parts[0], parts[1]);
+            });
+            startPoint = route.waypoint[0].mappedPosition;
+            endPoint = route.waypoint[1].mappedPosition;
+            var routeLine = new H.map.Polyline(strip, {
+                style: { strokeColor: 'blue', lineWidth: 5 }
+            });
+            var startMarker = new H.map.Marker({
+                lat: startPoint.latitude,
+                lng: startPoint.longitude
+            });
+            var endMarker = new H.map.Marker({
+                lat: endPoint.latitude,
+                lng: endPoint.longitude
+            });
+            map.addObjects([routeLine, startMarker, endMarker]);
+            map.setViewBounds(routeLine.getBounds());
+        }
+    };
+    var router = platform.getRoutingService();
+    router.calculateRoute(routingParameters, onResult,
+    function(error) {
+        alert(error.message);
+    });
+    //Step 3: make the map interactive
+    // MapEvents enables the event system
+    // Behavior implements default interactions for pan/zoom (also on mobile touch environments)
+    var ui = H.ui.UI.createDefault(map, defaultLayers);
+}
+
+// Puts charger icons in the map
+function putChargers(coords, map, icon){
+    for(var i=0; i<coords.length; i++){
+        var incidentMarker = new H.map.Marker({
+            lat: coords[i][0],
+            lng: coords[i][1]
+         },{icon:icon});
+        map.addObjects([incidentMarker]);
+    }
+}
+
+// Display route in the map
+var start = "{{info['info']['start'][0]}}"+","+"{{info['info']['start'][1]}}"
+var destin = "{{info['info']['destin'][0]}}"+","+"{{info['info']['destin'][1]}}"
+updateMap(platform, map, "", [start, destin]);
+
+// First charger icons
+var icon = new H.map.Icon('/static/img/preview_30.png');
+putChargers({{first_chargers}}, map, icon);
+
+// Charger icons
+icon = new H.map.Icon('/static/img/last_30.png');
+putChargers({{chargers}}, map, icon)
+
+// var first_chargers = JSON.parse('{{ first_chargers | tojson }}');
+// putChargers(first_chargers, map, icon);
+
+// var chargers = JSON.parse('{{ chargers | tojson }}');
+// putChargers(chargers, map, icon)
+
+
+</script>
+
+{% endblock %}

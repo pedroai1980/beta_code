@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-area">
+  <div id="form-user">
+    <p class="h2">Route Summary</p>
+    <ul id="summary-list">
+      <li>
+        <b>Start:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Barcelona
+      </li>
+      <li>
+        <b>Destin:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Madrid
+      </li>
+      <li>
+        <b>Distance:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        243.76 km
+      </li>
+      <li><b>Time w/&nbsp;&nbsp;&nbsp;Traffic:</b> 3h 22m</li>
+      <li><b>Time w/o Traffic:</b> 3h 10m</li>
+    </ul>
+
+    <p class="h2">Route Instructions</p>
+    <ul id="instruction-list">
+      <li>Instruccion 1</li>
+      <li>Instruccion 1</li>
+    </ul>
+  </div>
+  <div id="main-map">
+
+<script>
+  function reCenter(map, lat_, lon){
+    center = {lat: lat_, lng: lon};
+    map.setCenter(center, true);
+  }
+
+  function getGraph(id, img){
+    var tag = '<img class="plot" src="../static/img/'+img+'">';
+    document.getElementById(id).innerHTML = tag;
+  }
+</script>
+             
+  </div>
+  <div id="chargers-box">
+    <p class="h3 center">
+      First Chargers
+    </p>
+    <!-- <center>
+        <button class="show" onclick="putChargers(map)">Show</button>
+    </center> -->
+    <ul id="instruction-list">
+      <li><button class='right' onclick="reCenter(map, 40.5, -2)">Centre</button></li>
+      <li>Instruccion 1</li>
+    </ul>
+  </div>
+  
+  <div id="chargers-box">
+    <p class="h3 center">Chargers</p>
+    <ul id="instruction-list">
+      <li>Instruccion 1</li>
+      <li>Instruccion 1</li>
+    </ul>
+  </div>
+
+
+  <div class="separator"></div>
+
+
+  <div id="plots-box-struct">
+    <p class="h3 center">Generation Structure</p>
+    <center>
+      <button id="get-gen" onclick="getGraph('plots-box-struct', 'gen_struct.png')">
+        Get Graph!
+      </button>
+    </center>
+  </div>
+
+  <div id="plots-box-eco">
+    <p class="h3 center">Eco Score</p>
+    <center>
+      <button id="get-score" onclick="getGraph('plots-box-eco', 'eco_score.png')">
+        Get Graph!
+      </button>
+    </center>
+  </div>
+</div>
+
+
+
+
+<!-- Jquery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+type="text/javascript" charset="utf-8"></script>
+
+
+<script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"
+type="text/javascript" charset="utf-8"></script>
+<script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"
+type="text/javascript" charset="utf-8"></script>
+<script src="http://js.api.here.com/v3/3.0/mapsjs-ui.js" 
+type="text/javascript" charset="utf-8"></script>
+<link rel="stylesheet" type="text/css" 
+href="http://js.api.here.com/v3/3.0/mapsjs-ui.css" />
+
+<script>
+// Create the initial map of Europe centered in Berlin
+var platform = new H.service.Platform({
+    'app_id': 'Rs0YrqHE32DMv8eA2jlM',
+    'app_code': 'SU3UexcrQYbIsmlHwkIXKA'
+});
+var targetElement = document.getElementById('main-map');
+var defaultLayers = platform.createDefaultLayers();
+var map = new H.Map(
+    document.getElementById('main-map'),
+    defaultLayers.normal.map, {
+        zoom: 6,
+        center: { lat: 39.9422, lng: -3.736474 }
+    });
+
+window.addEventListener('resize', () => map.getViewPort().resize());
+
+var icon = new H.map.Icon('/static/img/last_30.png');
+
+// Update the map. Puts charger icons in the map
+function updateMap(platform, map, response, coords){
+    // First delete the previous map
+    // document.getElementById("main-map").innerHTML = "";
+
+    var targetElement = document.getElementById('main-map');
+    var defaultLayers = platform.createDefaultLayers();
+
+    var routingParameters = {
+      'mode': 'fastest;car;traffic:enabled',
+      'waypoint0': 'geo!'+coords[0],
+      'waypoint1': 'geo!'+coords[1],
+      //'mode'     : 'traffic',
+      'representation': 'display'
+    };
+
+    var onResult = function(result) {
+        var route,routeShape,startPoint,endPoint,strip;
+        if(result.response.route) {
+            route = result.response.route[0];
+            routeShape = route.shape;
+            strip = new H.geo.Strip();
+            routeShape.forEach(function(point) {
+                var parts = point.split(',');
+                strip.pushLatLngAlt(parts[0], parts[1]);
+            });
+            startPoint = route.waypoint[0].mappedPosition;
+            endPoint = route.waypoint[1].mappedPosition;
+            var routeLine = new H.map.Polyline(strip, {
+                style: { strokeColor: 'blue', lineWidth: 5 }
+            });
+            var startMarker = new H.map.Marker({
+                lat: startPoint.latitude,
+                lng: startPoint.longitude
+            });
+            var endMarker = new H.map.Marker({
+                lat: endPoint.latitude,
+                lng: endPoint.longitude
+            });
+            map.addObjects([routeLine, startMarker, endMarker]);
+            map.setViewBounds(routeLine.getBounds());
+        }
+    };
+    var router = platform.getRoutingService();
+    router.calculateRoute(routingParameters, onResult,
+    function(error) {
+        alert(error.message);
+    });
+    //Step 3: make the map interactive
+    // MapEvents enables the event system
+    // Behavior implements default interactions for pan/zoom (also on mobile touch environments)
+    var ui = H.ui.UI.createDefault(map, defaultLayers);
+    var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+}
+
+// Puts charger icons in the map
+function putChargers(coords, map, icon){
+    for(var i=0; i<coords.length; i++){
+        var incidentMarker = new H.map.Marker({
+            lat: coords[i][0],
+            lng: coords[i][1]
+         },{icon:icon});
+        map.addObjects([incidentMarker]);
+    }
+}
+
+
+updateMap(platform, map, "", ["40.502344,-3.763034", "41.400607,2.200086"]);
+
+var coords = [["40.455272", "-3.694315"], 
+              ["40.1199", "-3.15"], 
+              ["39.56", "-2.70"], 
+              ["38.969", "-0.1788"], 
+              ["41.576", "0.517"]];
+
+putChargers(coords, map, icon)
+
+
+</script>
+
+{% endblock %}

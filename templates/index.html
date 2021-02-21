@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-area">
+  <div id="form-user">
+    <p class="h2 center">Route parameters</p>
+    <form method="POST" action="/route/">
+      <p class="red"><b>Warning: </b>coordinates should be in the same format as the following: "1.4116, 57.98"</p>
+      Start:
+      <input type="text" class="margin-bottom" placeholder="Start coordinates" name="start">
+      Destin:
+      <input type="text" class="margin-bottom" placeholder="Destin coordinates" name="destin">
+      Hora de salida (hh:mm) - 24h:
+      <input type="text" class="margin-bottom" placeholder="9:33" name="hora_salida">
+      Autonomy at start:
+      <input type="text" class="margin-bottom" placeholder="Battery at start" name="battery_start">
+      Max autonomy:
+      <input type="text" class="margin-bottom" placeholder="Max autonomy" name="battery_max">
+      <!-- Country code. Set to Spain by Default -->
+      <input type="text" style="display:none;" value="ES" name="country_code">
+
+      <input type="submit" class="" value="Calculate route" name="send">
+    </form>
+  </div>
+</div>
+{% endblock %}

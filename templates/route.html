@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-area">
+  <div id="form-user">
+    <p class="h2">Route Summary</p>
+    <ul id="summary-list">
+      <li>
+        <b>Start:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["start"][0]}}, {{info["info"]["start"][1]}}
+      </li>
+      <li>
+        <b>Destin:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["destin"][0]}}, {{info["info"]["destin"][1]}}
+      </li>
+      <li>
+        <b>Distance:</b>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          {{info["info"]["distance"]}}
+      </li>
+      <li>
+          <b>Hora de salida: </b> 
+          &nbsp;&nbsp;
+          {{info["info"]["hora_salida"]}} h
+      </li>
+      <li>
+          <b>Time w/&nbsp;&nbsp;&nbsp;Traffic: </b> 
+          {{info["info"]["time_w_traffic"]}}
+      </li>
+      <li>
+          <b>Time w/o Traffic: </b>
+          {{info["info"]["time_wo_traffic"]}}
+      </li>
+    </ul>
+
+    <p class="h2">Route Instructions</p>
+    <ul class="instruction-list">
+      {% for instruct in info["info"]["instructions"] %}
+        <li>{{instruct}}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div id="main-map">
+             
+  </div>
+
+  <!-- Update the map with route info -->
+  <script>
+      // Create the initial map of Europe centered in Berlin
+      $('#api_response').hide()
+      var platform = new H.service.Platform({
+          'app_id': 'Rs0YrqHE32DMv8eA2jlM',
+          'app_code': 'SU3UexcrQYbIsmlHwkIXKA'
+      });
+      var targetElement = document.getElementById('main-map');
+      var defaultLayers = platform.createDefaultLayers();
+      var map = new H.Map(
+          document.getElementById('main-map'),
+          defaultLayers.normal.map, {
+              zoom: 6,
+              center: { lat: 39.9422, lng: -3.236474 }
+          }
+      );
+
+      // Display route in the map
+      var start = "{{info['info']['start'][0]}}"+","+"{{info['info']['start'][1]}}"
+      var destin = "{{info['info']['destin'][0]}}"+","+"{{info['info']['destin'][1]}}"
+      updateMap(platform, map, "", [start, destin]);
+  </script>
+
+
+  <div class="separator"></div>
+
+
+  <div id="chargers-box">
+    <p class="h3 center">
+      First Chargers
+    </p>
+    <table class="instruction-list table_block" id="first-chargers-list">
+
+    </table>
+  </div>
+  <div id="chargers-box">
+    <p class="h3 center">Chargers</p>
+    <ul class="instruction-list" id="chargers-list">
+
+    </ul>
+  </div>
+
+
+  <div class="separator"></div>
+
+
+  <div id="plots-box-struct">
+    <p class="h3 center">Generation Structure</p>
+    <center>
+      <button class="show" id="get-gen" onclick="getGraph('plots-box-struct', 'gen_struct.png')">
+        Get Graph!
+      </button>
+    </center>
+  </div>
+
+  <div id="plots-box-eco">
+    <p class="h3 center">Eco Score</p>
+    <center>
+      <button class="show" id="get-score" onclick="getGraph('plots-box-eco', 'eco_score.png')">
+        Get Graph!
+      </button>
+    </center>
+  </div>
+</div>
+
+
+
+<script>
+  function getGraph(id, img){
+    var tag = '<img class="plot" src="../static/img/'+img+'">'
+    document.getElementById(id).innerHTML = tag;
+  }
+</script>
+<script>
+
+// Retrieve charger data
+var chargers, first_chargers;
+var salida = 
+
+
+$.get(
+    "chargers/",
+    {start_lat  : {{info["info"]["start"][0]}},
+     start_lon  : {{info["info"]["start"][1]}}, 
+     destin_lat : {{info["info"]["destin"][0]}},
+     destin_lon : {{info["info"]["destin"][1]}},
+     b_start : {{info["info"]["b_start"]}},
+     b_max : {{info["info"]["battery"]}},
+     country : '{{info["info"]["country"]}}',
+     hora_salida : '{{info["info"]["hora_salida"]}}',
+     verbose : {{info["info"]["verbose"]}}},
+    
+    function(data) {
+        console.log(data)
+        // data = JSON.parse(data);
+
+        // Write first chargers
+        first_chargers = "";
+        for (i = 0; i < data.first_chargers.length; i++) {
+            let d = "<td> Distance: "+data.first_chargers[i].dist+"m &nbsp;&nbsp;&nbsp;&nbsp;</td>";
+            let p = "<td> Power: "+data.first_chargers[i].power+"kwh &nbsp;&nbsp;&nbsp;&nbsp;</td>";
+            let s = "<td> Score: "+data.first_chargers[i].rel_ + "&nbsp;</td>";
+
+            // window.lat_ = data.first_chargers[i].coords[0];
+            // window.lon = data.first_chargers[i].coords[1];
+
+            // // let button = "<td><button class='right' onclick='reCenter(map, window.lat_, window.lon)'> Centre</button></td>";
+
+            first_chargers += "<tr>"+d+p+s+"</tr>";
+        }
+        window.first_chargers_array = data.first_chargers;
+        document.getElementById("first-chargers-list").innerHTML = first_chargers;
+        // Write chargers
+        chargers = "";
+        for (i = 0; i < data.chargers.length; i++) {
+            chargers += "<li> Power: "+data.chargers[i].power+"</li>";
+        }
+        window.chargers_array = data.chargers;
+        document.getElementById("chargers-list").innerHTML = chargers;
+    }
+);
+
+
+</script>
+
+{% endblock %}
